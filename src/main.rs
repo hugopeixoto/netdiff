@@ -111,27 +111,27 @@ impl MerkleAsk for NetworkAsker {
 }
 
 fn main() {
-    let matches = App::new("merklederp")
+    let matches = App::new("netdiff")
         .version("0.1.0")
         .author("Hugo Peixoto <hugo.peixoto@gmail.com>")
-        .about("Compares two files over the network")
+        .about("Compare two files over the network")
         .arg(
             Arg::with_name("filename").index(1)
                 .help("The filename to compare"),
         )
         .arg(
             Arg::with_name("server").short("s").long("server")
-                .value_name("ADDRESS")
+                .value_name("ADDRESS:PORT")
                 .takes_value(true)
                 .conflicts_with("client")
-                .help("listening network address")
+                .help("listening network address and port")
         )
         .arg(
             Arg::with_name("client").short("c").long("client")
-                .value_name("ADDRESS")
+                .value_name("ADDRESS:PORT")
                 .takes_value(true)
                 .conflicts_with("server")
-                .help("destination network address"),
+                .help("destination network address and port"),
         )
         .arg(
             Arg::with_name("block_size").short("b").long("block-size")
