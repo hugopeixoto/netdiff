@@ -19,14 +19,17 @@ block and linearly comparing them, but it requires the full merkle tree to be
 calculated before exchanges can begin.
 
 
-## Problems
+## Problems / limitations
 
-**Messages are exchanged in plaintext**. I considered adding TLS, but I'm using it
-via an SSH tunnel for now.
+**Messages are exchanged in plaintext**. I considered adding TLS, but I'm using
+it via an SSH tunnel for now.
 
 There's no network resilience, so if something goes wrong the program stops.
 This is particularly problematic because the merkle tree isn't stored anywhere,
 and it takes a while to compute for large files.
+
+I'm not sure what to output. For now, the mismatching block indexes get printed
+to `stdout`.
 
 
 ## Usage
@@ -47,4 +50,17 @@ OPTIONS:
 
 ARGS:
     <filename>    The filename to compare
+```
+
+An example running with block size of one byte and two mismatches:
+
+```
+$ cat input.txt
+abcdefghijklmnopqrstuvwxyz0123456789
+$ cat input2.txt
+abcdefgHijklmnopqrstuvwxyz012345_789
+$ netdiff input.txt -s 127.0.0.1:4000 -b 1 > /dev/null &
+$ netdiff input2.txt -c 127.0.0.1:4000 -b 1
+7
+32
 ```

@@ -169,8 +169,6 @@ fn main() {
     let tree = merkle_tree(&mut file, value_t!(matches, "block_size", u64).unwrap());
     if verbose { eprintln!("done. ({} nodes)", tree.len()) };
 
-    // merkle_print(&tree, tree.len() - 1, 0);
-
     let (blocks, questions) = merkle_diff(&tree, &mut NetworkAsker{ conn });
 
     if verbose { eprintln!("made {} exchanges", questions) };
