@@ -14,6 +14,9 @@ over the network. When a received hash doesn't match what was sent, the child
 hashes are queued to be sent. This is repeated until every block difference has
 been detected.
 
+The process is then repeated for each block with errors, this time with a block
+size of 1, to determine which bytes don't match.
+
 This reduces the number of exchanged hashes when compared to hashing every
 block and linearly comparing them, but it requires the full merkle tree to be
 calculated before exchanges can begin.
@@ -28,8 +31,8 @@ There's no network resilience, so if something goes wrong the program stops.
 This is particularly problematic because the merkle tree isn't stored anywhere,
 and it takes a while to compute for large files.
 
-I'm not sure what to output. For now, the mismatching block indexes get printed
-to `stdout`.
+I'm not sure what to output. For now, the program outputs the offset and
+hexadecimal value of every mismatching byte.
 
 
 ## Usage
@@ -59,8 +62,8 @@ $ cat input.txt
 abcdefghijklmnopqrstuvwxyz0123456789
 $ cat input2.txt
 abcdefgHijklmnopqrstuvwxyz012345_789
-$ netdiff input.txt -s 127.0.0.1:4000 -b 1 > /dev/null &
-$ netdiff input2.txt -c 127.0.0.1:4000 -b 1
-7
-32
+$ netdiff input.txt -s 127.0.0.1:4000 > /dev/null &
+$ netdiff input2.txt -c 127.0.0.1:4000
+7=[68]
+32=[36]
 ```

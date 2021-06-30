@@ -3,6 +3,7 @@ extern crate clap;
 
 use std::io::Write;
 use std::io::Read;
+use std::io::Seek;
 use std::hash::Hasher;
 use clap::{App, Arg};
 
@@ -170,21 +171,39 @@ fn main() {
     } else {
         panic!("");
     };
+    let mut asker = NetworkAsker { conn };
+
+    let block_size = value_t!(matches, "block_size", u64).unwrap();
 
     if verbose { eprintln!("building tree...") };
-    let tree = merkle_tree(&mut file, value_t!(matches, "block_size", u64).unwrap());
+    let tree = merkle_tree(&mut file, block_size);
     if verbose { eprintln!("done. ({} nodes)", tree.len()) };
 
-    let (blocks, questions) = merkle_diff(&tree, &mut NetworkAsker{ conn });
-
-    if verbose { eprintln!("made {} exchanges", questions) };
+    let mut total_exchanges = 0;
+    let (blocks, exchanges) = merkle_diff(&tree, &mut asker);
+    total_exchanges += exchanges;
+    if verbose { eprintln!("block hash exchanges: {}", exchanges) };
 
     if !blocks.is_empty() {
-        if verbose { println!("mismatched blocks:") };
+        if verbose { eprintln!("mismatched blocks: {:?}", blocks); };
+
         for block in blocks {
-            println!("{}", block);
+            file.seek(std::io::SeekFrom::Start(tree[block].offset)).unwrap();
+
+            let subtree = merkle_tree(&mut (&mut file).take(block_size), 1);
+
+            let (bytes, exchanges) = merkle_diff(&subtree, &mut asker);
+            total_exchanges += exchanges;
+
+            for offset in bytes {
+                let mut value = [0; 1];
+                file.seek(std::io::SeekFrom::Start(tree[block].offset + offset as u64)).unwrap();
+                file.read_exact(&mut value).unwrap();
+                println!("{}={:x?}", offset, value);
+            }
         }
 
+        if verbose { eprintln!("total exchanges: {}", total_exchanges); }
         std::process::exit(1);
     }
 }
