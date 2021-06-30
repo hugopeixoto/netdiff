@@ -119,7 +119,7 @@ impl MerkleAsk for NetworkAsker {
 
 fn main() {
     let matches = App::new("netdiff")
-        .version("0.1.0")
+        .version("0.2.0")
         .author("Hugo Peixoto <hugo.peixoto@gmail.com>")
         .about("Compare two files over the network")
         .arg(
