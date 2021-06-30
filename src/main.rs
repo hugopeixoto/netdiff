@@ -1,14 +1,15 @@
 #[macro_use]
 extern crate clap;
 
-use sha2::{Sha256, Digest};
 use std::io::Write;
 use std::io::Read;
+use std::hash::Hasher;
 use clap::{App, Arg};
 
 #[derive(Debug, Default)]
 struct MerkleNode {
-    hash: [u8; 32],
+    offset: u64,
+    hash: u64,
     children: Vec<usize>,
 }
 
@@ -28,13 +29,14 @@ fn merklify(hashes: &mut Vec<MerkleNode>, start: usize, count: usize) {
     for i in (0..count).step_by(step) {
         let mut node = MerkleNode::default();
 
-        let mut hasher = Sha256::new();
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
         for j in i .. (i + step).min(count) {
-            hasher.update(hashes[start + j].hash);
+            hasher.write_u64(hashes[start + j].hash);
             node.children.push(start + j);
+            node.offset = node.offset.min(hashes[start + j].offset);
         }
 
-        node.hash.copy_from_slice(&hasher.finalize());
+        node.hash = hasher.finish();
         hashes.push(node);
         inserted += 1;
     }
@@ -46,16 +48,20 @@ fn merklify(hashes: &mut Vec<MerkleNode>, start: usize, count: usize) {
 
 fn chunk_hashes(content: &mut dyn std::io::Read, block_size: u64) -> Vec<MerkleNode> {
     let mut hashes = vec![];
+    let mut chunk = Vec::with_capacity(block_size as usize);
 
     loop {
-        let mut chunk = Vec::with_capacity(block_size as usize);
+        chunk.clear();
         match content.take(block_size).read_to_end(&mut chunk) {
             Err(_) | Ok(0) => {
                 return hashes;
             },
             Ok(_) => {
                 let mut node = MerkleNode::default();
-                node.hash.copy_from_slice(&Sha256::digest(&chunk));
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                hasher.write(&chunk);
+                node.hash = hasher.finish();
+                node.offset = block_size * hashes.len() as u64;
                 hashes.push(node);
             }
         }
@@ -101,12 +107,12 @@ struct NetworkAsker {
 
 impl MerkleAsk for NetworkAsker {
     fn ask(&mut self, node: &MerkleNode) -> bool {
-        let mut answer = [0; 32];
-        self.conn.write(&node.hash).unwrap();
+        let mut answer = [0; 8];
+        self.conn.write(&node.hash.to_le_bytes()).unwrap();
         self.conn.flush().unwrap();
         self.conn.read_exact(&mut answer).unwrap();
 
-        answer == node.hash
+        u64::from_le_bytes(answer) == node.hash
     }
 }
 
