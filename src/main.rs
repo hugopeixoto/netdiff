@@ -195,11 +195,12 @@ fn main() {
             let (bytes, exchanges) = merkle_diff(&subtree, &mut asker);
             total_exchanges += exchanges;
 
-            for offset in bytes {
+            for block_offset in bytes {
+                let file_offset = tree[block].offset + block_offset as u64;
                 let mut value = [0; 1];
-                file.seek(std::io::SeekFrom::Start(tree[block].offset + offset as u64)).unwrap();
+                file.seek(std::io::SeekFrom::Start(file_offset)).unwrap();
                 file.read_exact(&mut value).unwrap();
-                println!("{}={:x?}", offset, value);
+                println!("{}={:x?}", file_offset, value);
             }
         }
 
